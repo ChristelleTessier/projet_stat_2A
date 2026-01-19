@@ -1,0 +1,198 @@
+---
+title: "Répartition des données data 2005-2014"
+format:
+  pdf:
+    toc: true
+    toc-depth: 4
+    toc-title: "Sommaire"
+    number-sections: true
+    header-includes:
+      - \usepackage{placeins}
+    geometry: [left=1.5cm, right=1.5cm, top=2cm, bottom=2cm]
+    fontsize: 10pt
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: librairie-recup-donnees
+#| include: false
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(lubridate)
+library(htmltools)
+
+# Import des fonctions externes
+source("../mes_fonctions.R")
+
+# Chargement et nettoyage initial
+data <- read_excel("../donnees/data_2005_2014.xlsx", sheet = 1, guess_max = 100000)
+```
+
+\newpage
+# Répartition générale par campagne
+* Filtre sur campagne (2008-2009, 2009-2010 et 2013-2014)
+* Ajout de la variable date (annee/mois/jour)
+* Modification(agrégation) des informations sur tailleBat et typeBat pour comparer les campagnes
+* Récupération des variables d'intéret (données temporelles, données géographique, données de comptage, autres données)
+
+## Repartition des informations (enquête, nombre de personne, nombre de ligne) par campagne
+
+```{r}
+#| label: traitement-donnees
+#| results: asis
+
+periodes_cibles <- c("2008_2009", "2009_2010", "2013_2014")
+
+# Utilisation des nouvelles fonctions
+data_select <- preparer_donnees_enquetes(data, periodes_cibles)
+info <- generer_synthese_effort(data_select)
+
+# Affichage
+col_groupe = "periodEchant"
+afficher_tableau_page(info, "Bilan de l'effort d'échantillonnage par période", col_groupe = col_groupe, nb_col=c(5,3,6))
+
+```
+
+## Repartition du type/taille (données agrégéé) de bateau par période d'échantillonage
+
+```{r}
+#| label: comparaison-agg
+#| results: asis
+
+# Définition des ordres communs grâce à l'harmonisation
+ord_type_final <- c("Voilier", "Moteur", "Léger (Jet/Kayac)", "Pneumatique/Autre", "Autre/Inconnu")
+ord_taille_final <- c("0-7m", "7-12m", "12-.m", "Léger/Spécifique (KY/JS/Z)", "Moteur (Non spécifié)", "Inconnu/NA")
+
+# Appel de la fonction de comparaison
+comparer_campagnes_proportions(data_select,
+                               periodes = c("2008_2009", "2009_2010", "2013_2014"),
+                               ordre_type_agg = ord_type_final,
+                               ordre_taille_agg = ord_taille_final)
+```
+
+\FloatBarrier
+
+## Fréquentation(personnes / lignes) par type/taille de bateau
+
+```{r}
+#| label: analyse-frequentation-agg
+#| results: asis
+#| fig-width: 10
+#| fig-height: 5
+
+# --- ANALYSES PAR TYPE DE BATEAU ---
+analyser_et_afficher_frequentation(data_select, "nbPers", "type_agg", "Fréquentation humaine", "type de bateau")
+analyser_et_afficher_frequentation(data_select, "nbLigne", "type_agg", "Puissance de pêche", "type de bateau")
+
+#cat("\n\\newpage\n")
+
+# --- ANALYSES PAR TAILLE DE BATEAU ---
+analyser_et_afficher_frequentation(data_select, "nbPers", "taille_agg", "Fréquentation humaine", "taille de bateau")
+analyser_et_afficher_frequentation(data_select, "nbLigne", "taille_agg", "Puissance de pêche", "taille de bateau")
+```
+
+
+```{r}
+#| label: analyse-factorisee
+#| results: asis
+#| fig-width: 10
+#| fig-height: 5
+
+# 1. Définition de la structure, des libellés et du paramétrage des découpes
+groupes_vars <- list(
+  "Données Temporelles" = list(
+    vars    = c("mois", "saison", "typeJ", "plageHoraire"),
+    labels  = c("le mois", "la saison", "le type de jour", "la plage horaire"),
+    nb_cols = list() # Tableaux complets pour ce groupe
+  ),
+  "Données Géographiques" = list(
+    vars    = c("zonagePAMPA", "groupe", "mouillage", "natureFond"),
+    labels  = c("la zone PAMPA", "le groupe", "le mouillage", "la nature du fond"),
+    nb_cols = list("groupe" = c(7, 7, 8)) # Découpage pour les 22 groupes
+  ),
+  "Données Météo" = list(
+    vars    = c("meteo", "lune", "nebulosite", "directionVent", "forceVent", "etatMer"),
+    labels  = c("la météo", "la lune", "la nébulosité", "la direction du vent", "la force du vent", "l'état de la mer"),
+    nb_cols = list("directionVent" = c(10,9)) # Découpage pour les 19 directions
+  ),
+  "Autres Données" = list(
+    vars    = c("act1", "categAct1", "act2", "categAct2"),
+    labels  = c("l'activité 1", "la catégorie d'activité 1", "l'activité 2", "la catégorie d'activité 2"),
+    nb_cols = list("act1" = c(12, 12)) # Découpage équilibré pour l'activité 1
+  )
+)
+
+# 2. Boucle de traitement automatisée par thématique
+for (nom_groupe in names(groupes_vars)) {
+
+  # Création d'une nouvelle section de niveau 1 avec saut de page
+  cat(paste0("\n\n\\newpage\n# ", nom_groupe, "\n"))
+
+  groupe <- groupes_vars[[nom_groupe]]
+
+  for (i in seq_along(groupe$vars)) {
+    v <- groupe$vars[i]
+    l <- groupe$labels[i]
+
+    # Extraction dynamique du paramètre nb_col (NULL par défaut si non défini)
+    config_col <- groupe$nb_cols[[v]]
+
+    # Appel de la routine globale qui gère désormais :
+    # - Nb jours, % Couverture (mois/saison), Nb enquêtes, % Enquêtes/Période, Moyennes
+    analyser_et_afficher_synthese_variable(
+      df = data_select,
+      var_etude = v,
+      label_etude = l,
+      nb_col = config_col
+    )
+
+    # Force LaTeX à rendre les tableaux avant de passer à la variable suivante
+    cat("\n\\FloatBarrier\n")
+  }
+}
+```
+
+
+
+
+\newpage
+
+# Annexes {.appendix}
+
+## Repartition Type vs Taille par campagne
+
+```{r}
+#| label: type-taille bat
+#| results: asis
+
+ordre_taille <- c("<5m", "5-7m", "7-10m", ">10m", "KY", "JS", "HEL", "NA", "TOTAL")
+ordre_type   <- c("V", "M", "KY", "JS", "HEL", "PI", "NA", "TOTAL")
+
+# Pour 2008-2009
+tab <- croiser_bat(data, "2008_2009", ordre_type, ordre_taille)
+
+afficher_tableau_page(tab,
+                      legende = "Répartition Type vs Taille des navires (2008-2009)",
+                      col_groupe = "typeBat")
+
+# Pour 2009-2010
+tab <- croiser_bat(data, "2009_2010", ordre_type, ordre_taille)
+afficher_tableau_page(tab,
+                      legende = "Répartition Type vs Taille des navires (2009-2010)",
+                      col_groupe = "typeBat")
+
+
+ordre_taille <- c("inf.7m", "7-12m", "sup.12m", "JS", "Z", "NM", "NA")
+ordre_type  <- c("JS", "V", "M", "NM", "PI", "Z", "NA", "TOTAL")
+
+# Pour 2013-2014
+tab <- croiser_bat(data, "2013_2014", ordre_type, ordre_taille)
+afficher_tableau_page(tab,
+                      legende = "Répartition Type vs Taille des navires (2013-2014)",
+                      col_groupe = "typeBat")
+```
