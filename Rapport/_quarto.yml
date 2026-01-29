@@ -1,0 +1,16 @@
+
+project:
+  type: book
+
+book:
+  title: "Rapport projet stat"
+  chapters:
+    - index.qmd # Page d'accueil / Intro
+    - partie1.qmd
+    - partie2.qmd
+
+format:
+  pdf:
+    documentclass: report
+    papersize: a4
+    number-sections: true

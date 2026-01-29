@@ -1,0 +1,7 @@
+---
+title: "Introduction"
+---
+
+# Introduction {.unnumbered .unlisted}
+
+Ceci est votre texte d'introduction. Il ne sera pas numéroté (ex: Chapitre 1) et ne figurera pas dans le sommaire.
