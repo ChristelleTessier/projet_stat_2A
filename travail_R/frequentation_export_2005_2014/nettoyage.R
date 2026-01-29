@@ -3,6 +3,9 @@ library(tidyverse)
 library(writexl)
 library(readxl)
 
+setwd("travail_R")
+rm(list = ls())
+
 # Fonctions de vérification nbNA et format et repartition valeur numérique
 ##########################################
 get_diagnostic_NA <- function(df) {

@@ -3,6 +3,9 @@ library(tidyverse)
 library(writexl)
 library(readxl)
 
+setwd("travail_R")
+rm(list = ls())
+
 # Fonctions de vérification nbNA et format et repartition valeur numérique
 ##########################################
 get_diagnostic_NA <- function(df) {
@@ -174,8 +177,22 @@ verifications <- function(df_init, df_transfo, cols) {
 
 # récupération des données
 #######################################
-data <- read_excel("donnees/FREQUENTATION_export_2005-2013.xlsx",
-                   sheet = 1)
+data <- read_table("donnees/FREQUENTATION_export.txt")
+
+# Mise en correspondance nom colonne avec frequentation_export_2005_2014
+#######################################
+noms_fichier1 <- c(
+  "AMP", "numSortie", "nbMoyen", "periodEchant", "annee", "mois", "jour", 
+  "saison", "typeJ", "heure", "meteo", "nebulosite", "directionVent", 
+  "forceVent", "etatMer", "lune", "zone", "zonagePAMPA", "groupe", 
+  "typeBat", "tailleBat", "immat", "nbPers", "nbLigne", "mouillage", 
+  "natureFond", "latitude", "longitude", "act1", "categAct1", "act2", 
+  "categAct2", "questInfo", "sens1", "sens2"
+)
+
+colnames(data) <- noms_fichier1
+
+
 
 cols_numeriques <- c("annee","mois","jour","nebulosite", "forceVent", "etatMer", "nbPers", "nbLigne")
 
@@ -226,9 +243,10 @@ verifications(data, data_transfo,cols_numeriques)
 
 # Enregistrement
 #######################################
-write_xlsx(data_transfo, "donnees/data_2005_2014.xlsx")
+write_xlsx(data_transfo, "donnees/data_PMCB.xlsx")
 
-data_bis <- read_excel("donnees/data_2005_2014.xlsx",
+data_bis <- read_excel("donnees/data_PMCB.xlsx",
                    sheet = 1)
 
 verifications(data_bis, data_transfo,cols_numeriques)
+
