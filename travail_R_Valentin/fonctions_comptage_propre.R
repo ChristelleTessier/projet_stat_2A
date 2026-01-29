@@ -92,6 +92,9 @@ data_propre <- read_excel("~/ENSAI-Scolarité/projet statistique/donnees/data_20
 
 ref_geo <- st_read("~/ENSAI-Scolarité/projet statistique/referentiels cartographiques/format gpkg/RefSpatial_08012014.gpkg")
 
+CalendrierGeneral <- read.delim("~/ENSAI-Scolarité/projet statistique/donnees/CalendrierGeneral.txt")
+
+
 #### Transformations des types de variables ####
 
 
